@@ -21,7 +21,11 @@ import sys
 import warnings
 warnings.filterwarnings("ignore")
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# مسیر ریشه پروژه (سازگار با Streamlit Cloud و اجرای محلی)
+_ROOT = os.path.dirname(os.path.abspath(__file__))
+if _ROOT not in sys.path:
+    sys.path.insert(0, _ROOT)
+os.chdir(_ROOT)
 
 # ── کتابخانه‌های اختیاری (در صورت نبود، اپ همچنان اجرا می‌شود) ──
 HAS_FOLIUM = False
@@ -62,9 +66,37 @@ if _missing:
     )
     st.stop()
 
-from utils.styles import CUSTOM_CSS
-from utils.ml_engines import DecisionEngine, RULEngine, ResidualValueEngine, AnomalyEngine
-from utils.openrouter_client import is_configured, explain_decision, answer_ops_question
+# بارگذاری ماژول‌های داخلی
+try:
+    from utils.styles import CUSTOM_CSS
+except Exception as _e:
+    CUSTOM_CSS = """
+    html, body, [class*="css"] { font-family: Tahoma, sans-serif !important; direction: rtl; }
+    .stApp { background: #FFFDE7; }
+    """
+    import streamlit as _st
+    _st.warning(f"ماژول styles بارگذاری نشد. پوشه utils را در GitHub آپلود کنید. ({_e})")
+
+try:
+    from utils.ml_engines import DecisionEngine, RULEngine, ResidualValueEngine, AnomalyEngine
+except Exception as _e:
+    import streamlit as _st
+    _st.error(
+        "پوشه **utils** یا فایل‌های مدل روی سرور نیست.\n\n"
+        "در GitHub باید این ساختار باشد:\n"
+        "app.py\nutils/styles.py\nutils/ml_engines.py\ndata/assets.csv\n..."
+    )
+    _st.stop()
+
+try:
+    from utils.openrouter_client import is_configured, explain_decision, answer_ops_question
+except Exception:
+    def is_configured():
+        return False
+    def explain_decision(*a, **k):
+        return "سرور هوشمند در دسترس نیست."
+    def answer_ops_question(*a, **k):
+        return "سرور هوشمند در دسترس نیست."
 
 # ─────────────────────────────────────────────
 # پیکربندی صفحه
